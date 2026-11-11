@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeSchool — Главная панель</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #0f172a; }
+.card-shadow { box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); }
+textarea.code-editor { font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5; min-height: 400px; }
+.tab-btn { background: rgba(255,255,255,0.1); color: #fff; }
+.tab-btn.active-tab { background: #fff; color: #0f172a; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- ЭКРАН ВХОДА -->
+<div id="loginScreen" class="flex-grow flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl p-8 card-shadow max-w-sm w-full text-center space-y-4">
+    <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-900 flex items-center justify-center text-white text-3xl shadow-lg mb-2">👑</div>
+    <h1 class="text-xl font-bold">Супер-Админка</h1>
+    <p class="text-xs text-slate-500">Управление сайтами и их кодом</p>
+    <input type="password" id="masterPass" placeholder="Пароль..." onkeydown="if(event.key==='Enter') authAdmin()" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500">
+    <button onclick="authAdmin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl">Войти</button>
+    <p id="loginError" class="text-xs text-rose-500 font-medium hidden">Неверный пароль!</p>
+  </div>
+</div>
+
+<!-- ПАНЕЛЬ УПРАВЛЕНИЯ -->
+<div id="dashScreen" class="hidden flex-col min-h-screen flex-grow">
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">👑</span>
+        <h1 class="font-bold">Супер-Админка</h1>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="loadAllData()" class="bg-white/10 hover:bg-white/20 text-xs font-semibold px-3 py-2 rounded-lg">🔄</button>
+        <button onclick="location.reload()" class="bg-rose-600 hover:bg-rose-700 text-xs font-semibold px-3 py-2 rounded-lg">Выйти</button>
+      </div>
+    </div>
+    <div class="max-w-6xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto">
+      <button onclick="switchTab('psych')" id="tab-psych" class="tab-btn active-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">🛡️ Жалобы</button>
+      <button onclick="switchTab('voice')" id="tab-voice" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">💡 Идеи</button>
+      <button onclick="switchTab('training')" id="tab-training" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">🎮 Тренинг</button>
+      <button onclick="switchTab('code')" id="tab-code" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">💻 Код сайтов</button>
+      <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">⚙️ Настройки</button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto w-full p-4 space-y-6 flex-grow">
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-white p-4 rounded-xl card-shadow border"><span class="text-[10px] font-bold uppercase text-slate-400">Жалоб</span><p id="statPsych" class="text-2xl font-black text-rose-600">0</p></div>
+      <div class="bg-white p-4 rounded-xl card-shadow border"><span class="text-[10px] font-bold uppercase text-slate-400">Идей</span><p id="statVoice" class="text-2xl font-black text-indigo-600">0</p></div>
+      <div class="bg-white p-4 rounded-xl card-shadow border"><span class="text-[10px] font-bold uppercase text-slate-400">Писем</span><p id="statTraining" class="text-2xl font-black text-amber-600">0</p></div>
+      <div class="bg-white p-4 rounded-xl card-shadow border"><span class="text-[10px] font-bold uppercase text-slate-400">Статус</span><p id="statStatus" class="text-sm font-bold text-emerald-600 mt-2">Открыто</p></div>
+    </div>
+
+    <section id="sec-psych" class="space-y-4">
+      <div class="bg-white rounded-2xl p-4 border card-shadow flex justify-between items-center">
+        <h2 class="font-bold">Жалобы психологу</h2>
+        <button onclick="togglePsychClosed()" id="btnTogglePsych" class="text-xs font-bold bg-rose-100 text-rose-700 px-3 py-2 rounded-lg">🔒 Закрыть</button>
+      </div>
+      <div id="listPsych" class="space-y-3"></div>
+    </section>
+
+    <section id="sec-voice" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 border card-shadow flex justify-between items-center">
+        <h2 class="font-bold">Идеи и проблемы</h2>
+        <button onclick="toggleVoiceClosed()" id="btnToggleVoice" class="text-xs font-bold bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg">🔒 Закрыть</button>
+      </div>
+      <div id="listVoice" class="space-y-3"></div>
+    </section>
+
+    <section id="sec-training" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-4 border card-shadow"><h2 class="font-bold">Письма из тренинга</h2></div>
+      <div id="listTraining" class="space-y-3"></div>
+    </section>
+
+    <section id="sec-code" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-5 border card-shadow space-y-4">
+        <div class="border-b pb-3">
+          <h2 class="font-bold text-lg">💻 Редактор кода</h2>
+          <p class="text-xs text-slate-500 mt-1">Загружайте HTML с GitHub, изменяйте и сохраняйте обратно.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="selectSite('psych')" id="btnSitePsych" class="site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-indigo-600 text-white">🛡️ Служба доверия</button>
+          <button onclick="selectSite('voice')" id="btnSiteVoice" class="site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-white">💡 Голос учеников</button>
+          <button onclick="selectSite('training')" id="btnSiteTraining" class="site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-white">🎮 Тренинг</button>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="loadCode()" class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-bold px-4 py-2 rounded-lg">📂 Загрузить код</button>
+          <button onclick="saveCode()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg">💾 Сохранить на GitHub</button>
+        </div>
+        <p id="codeStatus" class="text-xs text-slate-500">Выберите сайт и нажмите «Загрузить код»</p>
+        <textarea id="codeEditor" class="w-full code-editor p-3 border rounded-lg bg-slate-50 focus:outline-none focus:border-indigo-500" placeholder="Нажмите «Загрузить код»..."></textarea>
+      </div>
+    </section>
+
+    <section id="sec-settings" class="space-y-4 hidden">
+      <div class="bg-white rounded-2xl p-5 border card-shadow space-y-4">
+        <h2 class="font-bold text-lg border-b pb-2">⚙️ Настройки</h2>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
+          ⚠️ <b>Внимание:</b> Токен дает полный доступ к репозиториям. Никому его не передавайте.
+        </div>
+        <div class="space-y-3 pt-3 border-t">
+          <div class="bg-slate-50 p-3 rounded-lg space-y-2">
+            <p class="text-xs font-bold text-rose-700">🛡️ Служба доверия (Психолог)</p>
+            <input type="text" id="gh_psych_token" placeholder="GitHub Token (ghp_...)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_psych_owner" placeholder="Владелец (ник)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_psych_repo" placeholder="Репозиторий (-safeschool)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_psych_path" placeholder="Файл (index.html)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+          </div>
+          <div class="bg-slate-50 p-3 rounded-lg space-y-2">
+            <p class="text-xs font-bold text-indigo-700">💡 Голос учеников (Твой)</p>
+            <input type="text" id="gh_voice_token" placeholder="GitHub Token" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_voice_owner" placeholder="Владелец (ник)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_voice_repo" placeholder="Репозиторий" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_voice_path" placeholder="Файл (index.html)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+          </div>
+          <div class="bg-slate-50 p-3 rounded-lg space-y-2">
+            <p class="text-xs font-bold text-amber-700">🎮 Тренинг (Твой)</p>
+            <input type="text" id="gh_training_token" placeholder="GitHub Token" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_training_owner" placeholder="Владелец (ник)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_training_repo" placeholder="Репозиторий (safeschool-trening)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+            <input type="text" id="gh_training_path" placeholder="Файл (index.html)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
+          </div>
+        </div>
+        <button onclick="saveSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg">💾 Сохранить настройки</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const BIN_ID = "6af3158dffd5d16053b6a4ae";
+const MASTER_KEY = "$2a$10$5OG8yAXzsTfGHDGr/POtMOcu6YnKqlOE1CCYpXFlgRCCiVp7AwWOe";
+const API_URL = "https://api.jsonbin.io/v3/b/" + BIN_ID;
+
+let data = {
+  posts: [], voice_posts: [], training_letters: [],
+  isSiteClosed: false, chatClosed: false,
+  settings: { adminPass: 'bozdakov', github: { psych: {}, voice: {}, training: {} } }
+};
+
+let currentSite = 'psych';
+let currentSha = null;
+let isFetching = false;
+
+function authAdmin() {
+  const p = document.getElementById('masterPass').value;
+  if (p === (data.settings.adminPass || 'bozdakov')) {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('dashScreen').classList.remove('hidden');
+    document.getElementById('dashScreen').classList.add('flex');
+    loadAllData();
+    setInterval(loadAllData, 15000);
+  } else {
+    document.getElementById('loginError').classList.remove('hidden');
+  }
+}
+
+async function loadAllData() {
+  if (isFetching) return;
+  isFetching = true;
+  try {
+    const res = await fetch(`${API_URL}/latest?t=${Date.now()}`, { headers: { 'X-Master-Key': MASTER_KEY, 'X-Bin-Meta': 'false' } });
+    const n = await res.json();
+    if (n) {
+      data = { ...data, ...n };
+      if (!data.settings) data.settings = {};
+      if (!data.settings.github) data.settings.github = {};
+      if (!data.settings.github.psych) data.settings.github.psych = {};
+      if (!data.settings.github.voice) data.settings.github.voice = {};
+      if (!data.settings.github.training) data.settings.github.training = {};
+      renderAll();
+    }
+  } catch(e) { console.error(e); } finally { isFetching = false; }
+}
+
+async function saveSection(k, v) {
+  try {
+    const r = await fetch(`${API_URL}/latest?t=${Date.now()}`, { headers: { 'X-Master-Key': MASTER_KEY, 'X-Bin-Meta': 'false' } });
+    const cur = await r.json() || {};
+    cur[k] = v;
+    await fetch(API_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY }, body: JSON.stringify(cur) });
+    data[k] = v;
+    renderAll();
+  } catch(e) { alert('Ошибка сохранения'); }
+}
+
+function switchTab(id) {
+  document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+  document.getElementById('sec-' + id).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+  document.getElementById('tab-' + id).classList.add('active-tab');
+}
+
+function esc(s) { return (s || '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderAll() {
+  document.getElementById('statPsych').textContent = (data.posts || []).length;
+  document.getElementById('statVoice').textContent = (data.voice_posts || []).length;
+  document.getElementById('statTraining').textContent = (data.training_letters || []).length;
+  document.getElementById('btnTogglePsych').textContent = data.isSiteClosed ? '🟢 Открыть' : '🔒 Закрыть';
+  document.getElementById('btnToggleVoice').textContent = data.chatClosed ? '🟢 Открыть' : '🔒 Закрыть';
+  document.getElementById('statStatus').textContent = (data.isSiteClosed || data.chatClosed) ? 'Есть закрытые' : 'Открыто';
+
+  ['psych', 'voice', 'training'].forEach(s => {
+    const g = data.settings.github[s] || {};
+    const el = document.getElementById('gh_' + s + '_token');
+    if(el) el.value = g.token || '';
+    const ow = document.getElementById('gh_' + s + '_owner');
+    if(ow) ow.value = g.owner || '';
+    const rp = document.getElementById('gh_' + s + '_repo');
+    if(rp) rp.value = g.repo || '';
+    const pt = document.getElementById('gh_' + s + '_path');
+    if(pt) pt.value = g.path || 'index.html';
+  });
+
+  renderPsych(); renderVoice(); renderTraining();
+}
+
+function renderPsych() {
+  const l = document.getElementById('listPsych');
+  if (!data.posts || !data.posts.length) { l.innerHTML = '<p class="text-sm text-slate-400 text-center p-8 bg-white rounded-2xl border">Жалоб нет</p>'; return; }
+  l.innerHTML = [...data.posts].sort((a,b) => b.id - a.id).map(p => `
+    <div class="bg-white rounded-2xl p-4 border card-shadow space-y-2">
+      <div class="flex justify-between items-start">
+        <div><span class="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded">${esc(p.category)}</span><h3 class="font-bold mt-1">${esc(p.name)} (${esc(p.class)})</h3></div>
+        <span class="text-[10px] font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">${esc(p.status)}</span>
+      </div>
+      <p class="text-xs text-slate-500"><b>Обидчик:</b> ${esc(p.bully)}</p>
+      <p class="text-sm bg-slate-50 p-2 rounded">${esc(p.desc)}</p>
+      <div class="flex gap-2">
+        <select onchange="upPsychStatus('${p.id}', this.value)" class="text-xs border rounded px-2 py-1 bg-white">
+          <option value="Новое" ${p.status === 'Новое' ? 'selected' : ''}>Новое</option>
+          <option value="В работе" ${p.status === 'В работе' ? 'selected' : ''}>В работе</option>
+          <option value="Встреча" ${p.status === 'Встреча' ? 'selected' : ''}>Встреча</option>
+          <option value="Решено" ${p.status === 'Решено' ? 'selected' : ''}>Решено</option>
+        </select>
+        <button onclick="delPsych('${p.id}')" class="text-xs font-bold bg-rose-600 text-white px-3 py-1 rounded ml-auto">Удалить</button>
+      </div>
+      <div class="pt-2 border-t">
+        <textarea id="ansP_${p.id}" class="w-full text-xs p-2 border rounded bg-slate-50" placeholder="Ответ...">${esc(p.replyToStudent)}</textarea>
+        <button onclick="replyPsych('${p.id}')" class="mt-1 text-xs font-bold bg-indigo-600 text-white px-3 py-1 rounded">Отправить</button>
+      </div>
+    </div>
+  `).join('');
+}
+function upPsychStatus(id, s) { saveSection('posts', data.posts.map(p => String(p.id) === String(id) ? {...p, status: s} : p)); }
+function replyPsych(id) { const t = document.getElementById('ansP_' + id).value.trim(); saveSection('posts', data.posts.map(p => String(p.id) === String(id) ? {...p, replyToStudent: t} : p)); alert('Отправлено!'); }
+function delPsych(id) { if(confirm('Удалить?')) saveSection('posts', data.posts.filter(p => String(p.id) !== String(id))); }
+function togglePsychClosed() { saveSection('isSiteClosed', !data.isSiteClosed); }
+
+function renderVoice() {
+  const l = document.getElementById('listVoice');
+  if (!data.voice_posts || !data.voice_posts.length) { l.innerHTML = '<p class="text-sm text-slate-400 text-center p-8 bg-white rounded-2xl border">Идей нет</p>'; return; }
+  l.innerHTML = [...data.voice_posts].sort((a,b) => b.created - a.created).map(p => `
+    <div class="bg-white rounded-2xl p-4 border card-shadow space-y-2">
+      <div class="flex justify-between items-start">
+        <div><span class="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded">${esc(p.category)}</span><h3 class="font-bold mt-1">${esc(p.title)}</h3></div>
+        <span class="text-[10px] font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">${esc(p.status)}</span>
+      </div>
+      <p class="text-sm bg-slate-50 p-2 rounded">${esc(p.body)}</p>
+      <div class="flex gap-2">
+        <select onchange="upVoiceStatus('${p.id}', this.value)" class="text-xs border rounded px-2 py-1 bg-white">
+          <option value="Новое" ${p.status === 'Новое' ? 'selected' : ''}>Новое</option>
+          <option value="В работе" ${p.status === 'В работе' ? 'selected' : ''}>В работе</option>
+          <option value="Выполнено" ${p.status === 'Выполнено' ? 'selected' : ''}>Выполнено</option>
+        </select>
+        <button onclick="delVoice('${p.id}')" class="text-xs font-bold bg-rose-600 text-white px-3 py-1 rounded ml-auto">Удалить</button>
+      </div>
+      <div class="pt-2 border-t">
+        <textarea id="ansV_${p.id}" class="w-full text-xs p-2 border rounded bg-slate-50" placeholder="Ответ...">${esc(p.answer)}</textarea>
+        <button onclick="replyVoice('${p.id}')" class="mt-1 text-xs font-bold bg-indigo-600 text-white px-3 py-1 rounded">Опубликовать</button>
+      </div>
+    </div>
+  `).join('');
+}
+function upVoiceStatus(id, s) { saveSection('voice_posts', data.voice_posts.map(p => String(p.id) === String(id) ? {...p, status: s} : p)); }
+function replyVoice(id) { const t = document.getElementById('ansV_' + id).value.trim(); saveSection('voice_posts', data.voice_posts.map(p => String(p.id) === String(id) ? {...p, answer: t} : p)); alert('Опубликовано!'); }
+function delVoice(id) { if(confirm('Удалить?')) saveSection('voice_posts', data.voice_posts.filter(p => String(p.id) !== String(id))); }
+function toggleVoiceClosed() { saveSection('chatClosed', !data.chatClosed); }
+
+function renderTraining() {
+  const l = document.getElementById('listTraining');
+  if (!data.training_letters || !data.training_letters.length) { l.innerHTML = '<p class="text-sm text-slate-400 text-center p-8 bg-white rounded-2xl border">Писем нет</p>'; return; }
+  l.innerHTML = [...data.training_letters].sort((a,b) => b.id - a.id).map(x => `
+    <div class="bg-white rounded-2xl p-4 border card-shadow space-y-2">
+      <div class="flex justify-between"><span class="font-bold text-sm">${x.isAnon ? '👤 Аноним' : '👤 ' + esc(x.name) + ' (' + esc(x.class) + ')'}</span><span class="text-[10px] text-slate-400">${esc(x.date)}</span></div>
+      <p class="text-sm bg-slate-50 p-3 rounded">${esc(x.text)}</p>
+      <button onclick="delTrain('${x.id}')" class="text-xs font-bold bg-rose-600 text-white px-3 py-1 rounded">Удалить</button>
+    </div>
+  `).join('');
+}
+function delTrain(id) { if(confirm('Удалить?')) saveSection('training_letters', data.training_letters.filter(l => String(l.id) !== String(id))); }
+
+function saveSettings() {
+  const ns = { ...data.settings, github: {} };
+  ['psych', 'voice', 'training'].forEach(s => {
+    ns.github[s] = {
+      token: document.getElementById('gh_' + s + '_token').value.trim(),
+      owner: document.getElementById('gh_' + s + '_owner').value.trim(),
+      repo: document.getElementById('gh_' + s + '_repo').value.trim(),
+      path: document.getElementById('gh_' + s + '_path').value.trim() || 'index.html'
+    };
+  });
+  saveSection('settings', ns);
+  alert('✅ Настройки сохранены!');
+}
+
+function selectSite(site) {
+  currentSite = site;
+  currentSha = null;
+  document.querySelectorAll('.site-sel-btn').forEach(b => b.className = 'site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-white');
+  const id = 'btnSite' + site.charAt(0).toUpperCase() + site.slice(1);
+  const btn = document.getElementById(id);
+  if(btn) btn.className = 'site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-indigo-600 text-white';
+  document.getElementById('codeStatus').textContent = 'Сайт: ' + site;
+  document.getElementById('codeEditor').value = '';
+}
+
+async function loadCode() {
+  const cfg = data.settings.github[currentSite];
+  if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) { alert('Заполните настройки GitHub во вкладке ⚙️ Настройки!'); return; }
+  document.getElementById('codeStatus').textContent = '⏳ Загрузка...';
+  try {
+    const r = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`, {
+      headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    const content = decodeURIComponent(escape(atob(j.content.replace(/\s/g, ''))));
+    document.getElementById('codeEditor').value = content;
+    currentSha = j.sha;
+    document.getElementById('codeStatus').textContent = '✅ Загружено: ' + content.length + ' символов. SHA: ' + j.sha.slice(0, 7);
+  } catch(e) { document.getElementById('codeStatus').textContent = '❌ ' + e.message; }
+}
+
+async function saveCode() {
+  const cfg = data.settings.github[currentSite];
+  const c = document.getElementById('codeEditor').value;
+  if (!cfg || !cfg.token) { alert('Заполните настройки!'); return; }
+  if (!c) { alert('Код пустой'); return; }
+  if (!currentSha) { alert('Сначала загрузите код!'); return; }
+  if (!confirm('Перезаписать текущий код сайта?')) return;
+  
+  document.getElementById('codeStatus').textContent = '⏳ Сохранение...';
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(c)));
+    const r = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`, {
+      method: 'PUT',
+      headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Обновление из админки ' + new Date().toISOString(), content: encoded, sha: currentSha, branch: 'main' })
+    });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.message); }
+    const j = await r.json();
+    currentSha = j.content.sha;
+    document.getElementById('codeStatus').textContent = '✅ Сохранено! Новый SHA: ' + j.content.sha.slice(0, 7);
+  } catch(e) { document.getElementById('codeStatus').textContent = '❌ ' + e.message; }
+}
+
+selectSite('psych');
+loadAllData();
+</script>
+</body>
+</html>

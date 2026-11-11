@@ -202,6 +202,7 @@ function switchTab(id) {
 
 function esc(s) { return (s || '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// ВНИМАНИЕ: здесь исправление. Функция не трогает поля, в которых сейчас курсор.
 function renderAll() {
   document.getElementById('statPsych').textContent = (data.posts || []).length;
   document.getElementById('statVoice').textContent = (data.voice_posts || []).length;
@@ -213,13 +214,13 @@ function renderAll() {
   ['psych', 'voice', 'training'].forEach(s => {
     const g = data.settings.github[s] || {};
     const el = document.getElementById('gh_' + s + '_token');
-    if(el) el.value = g.token || '';
+    if(el && document.activeElement !== el) el.value = g.token || '';
     const ow = document.getElementById('gh_' + s + '_owner');
-    if(ow) ow.value = g.owner || '';
+    if(ow && document.activeElement !== ow) ow.value = g.owner || '';
     const rp = document.getElementById('gh_' + s + '_repo');
-    if(rp) rp.value = g.repo || '';
+    if(rp && document.activeElement !== rp) rp.value = g.repo || '';
     const pt = document.getElementById('gh_' + s + '_path');
-    if(pt) pt.value = g.path || 'index.html';
+    if(pt && document.activeElement !== pt) pt.value = g.path || 'index.html';
   });
 
   renderPsych(); renderVoice(); renderTraining();

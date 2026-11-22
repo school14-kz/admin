@@ -1,373 +1,654 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SafeSchool — Главная панель</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #0f172a; }
-.card-shadow { box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05); }
-textarea.code-editor { font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5; min-height: 400px; }
-.tab-btn { background: rgba(255,255,255,0.1); color: #fff; }
-.tab-btn.active-tab { background: #fff; color: #0f172a; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Квиз: Экономия энергии</title>
+    <!-- Подключение Tailwind CSS для современного и адаптивного дизайна -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключение шрифта Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Библиотека для яркой анимации конфетти -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Анимация встряски при неправильном ответе */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+
+        .animate-shake {
+            animation: shake 0.45s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* Анимация плавного появления элементов */
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeInScale 0.35s ease-out forwards;
+        }
+
+        /* Стилизация кнопок вариантов ответа */
+        .option-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .option-btn:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px -3px rgba(16, 185, 129, 0.15);
+        }
+
+        .option-btn:not(:disabled):active {
+            transform: translateY(0);
+        }
+
+        /* Красная вспышка по краям экрана при ошибке */
+        @keyframes errorPulse {
+            0% { box-shadow: inset 0 0 0 0 rgba(239, 68, 68, 0); }
+            30% { box-shadow: inset 0 0 40px 10px rgba(239, 68, 68, 0.25); }
+            100% { box-shadow: inset 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .error-flash {
+            animation: errorPulse 0.6s ease-out;
+        }
+    </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body id="body-container" class="flex items-center justify-center p-4 sm:p-6 text-slate-800">
 
-<!-- ЭКРАН ВХОДА -->
-<div id="loginScreen" class="flex-grow flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl p-8 card-shadow max-w-sm w-full text-center space-y-4">
-    <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-900 flex items-center justify-center text-white text-3xl shadow-lg mb-2">👑</div>
-    <h1 class="text-xl font-bold">Супер-Админка</h1>
-    <p class="text-xs text-slate-500">Управление сайтами и их кодом</p>
-    <input type="password" id="masterPass" placeholder="Пароль..." onkeydown="if(event.key==='Enter') authAdmin()" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500">
-    <button onclick="authAdmin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm py-3 rounded-xl">Войти</button>
-    <p id="loginError" class="text-xs text-rose-500 font-medium hidden">Неверный пароль!</p>
-  </div>
-</div>
+    <!-- Главный контейнер приложения -->
+    <main class="w-full max-w-2xl bg-white/95 backdrop-blur-md rounded-3xl shadow-xl border border-white/60 overflow-hidden transition-all duration-300">
+        
+        <!-- Верхняя шапка с прогрессом и счётом -->
+        <header id="quiz-header" class="px-6 pt-6 pb-4 border-b border-slate-100">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 font-bold text-lg">⚡</span>
+                    <span class="font-bold text-slate-800 text-sm sm:text-base">Эко-Квиз</span>
+                </div>
+                
+                <div class="flex items-center gap-3 text-sm font-semibold">
+                    <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-600">
+                        Вопрос <span id="current-q-num" class="text-slate-900">1</span> / 20
+                    </span>
+                    <span class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                        Верно: <span id="score-count">0</span>
+                    </span>
+                </div>
+            </div>
 
-<!-- ПАНЕЛЬ УПРАВЛЕНИЯ -->
-<div id="dashScreen" class="hidden flex-col min-h-screen flex-grow">
-  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="text-xl">👑</span>
-        <h1 class="font-bold">Супер-Админка</h1>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="loadAllData()" class="bg-white/10 hover:bg-white/20 text-xs font-semibold px-3 py-2 rounded-lg">🔄</button>
-        <button onclick="location.reload()" class="bg-rose-600 hover:bg-rose-700 text-xs font-semibold px-3 py-2 rounded-lg">Выйти</button>
-      </div>
-    </div>
-    <div class="max-w-6xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto">
-      <button onclick="switchTab('psych')" id="tab-psych" class="tab-btn active-tab whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">🛡️ Жалобы</button>
-      <button onclick="switchTab('voice')" id="tab-voice" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">💡 Идеи</button>
-      <button onclick="switchTab('training')" id="tab-training" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">🎮 Тренинг</button>
-      <button onclick="switchTab('code')" id="tab-code" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">💻 Код сайтов</button>
-      <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold">⚙️ Настройки</button>
-    </div>
-  </header>
+            <!-- Прогресс-бар -->
+            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-500 ease-out" style="width: 5%"></div>
+            </div>
+        </header>
 
-  <main class="max-w-6xl mx-auto w-full p-4 space-y-6 flex-grow">
+        <!-- Экран вопроса -->
+        <section id="quiz-screen" class="p-6 sm:p-8">
+            <!-- Текст вопроса -->
+            <div class="mb-6 animate-fade-in" id="question-container">
+                <h1 id="question-text" class="text-xl sm:text-2xl font-bold text-slate-900 leading-snug">
+                    Загрузка вопроса...
+                </h1>
+            </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div class="bg-white p-4 rounded-xl card-shadow border"><span class="text-[10px] font-bold uppercase text-slate-400">Жалоб</span><p id="statPsych" class="text-2xl font-black text-rose-600">0</p></div>
-      <div class="bg-white p-4 rounded-xl card-shadow border"><span class="text-[10px] font-bold uppercase text-slate-400">Идей</span><p id="statVoice" class="text-2xl font-black text-indigo-600">0</p></div>
-      <div class="bg-white p-4 rounded-xl card-shadow border"><span class="text-[10px] font-bold uppercase text-slate-400">Писем</span><p id="statTraining" class="text-2xl font-black text-amber-600">0</p></div>
-      <div class="bg-white p-4 rounded-xl card-shadow border"><span class="text-[10px] font-bold uppercase text-slate-400">Статус</span><p id="statStatus" class="text-sm font-bold text-emerald-600 mt-2">Открыто</p></div>
-    </div>
+            <!-- Контейнер вариантов ответа (а, б, в) -->
+            <div id="options-container" class="space-y-3.5">
+                <!-- Кнопки генерируются через JS -->
+            </div>
 
-    <section id="sec-psych" class="space-y-4">
-      <div class="bg-white rounded-2xl p-4 border card-shadow flex justify-between items-center">
-        <h2 class="font-bold">Жалобы психологу</h2>
-        <button onclick="togglePsychClosed()" id="btnTogglePsych" class="text-xs font-bold bg-rose-100 text-rose-700 px-3 py-2 rounded-lg">🔒 Закрыть</button>
-      </div>
-      <div id="listPsych" class="space-y-3"></div>
-    </section>
+            <!-- Блок обратной связи (появляется после ответа) -->
+            <div id="feedback-box" class="hidden mt-6 p-4 sm:p-5 rounded-2xl border transition-all animate-fade-in">
+                <div class="flex items-start gap-3.5">
+                    <div id="feedback-icon" class="text-2xl sm:text-3xl select-none mt-0.5"></div>
+                    <div class="flex-1">
+                        <h3 id="feedback-title" class="font-bold text-base sm:text-lg"></h3>
+                        <p id="feedback-explanation" class="text-sm sm:text-base mt-1 leading-relaxed opacity-90"></p>
+                    </div>
+                </div>
+            </div>
 
-    <section id="sec-voice" class="space-y-4 hidden">
-      <div class="bg-white rounded-2xl p-4 border card-shadow flex justify-between items-center">
-        <h2 class="font-bold">Идеи и проблемы</h2>
-        <button onclick="toggleVoiceClosed()" id="btnToggleVoice" class="text-xs font-bold bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg">🔒 Закрыть</button>
-      </div>
-      <div id="listVoice" class="space-y-3"></div>
-    </section>
+            <!-- Кнопка перехода к следующему вопросу -->
+            <div id="next-btn-container" class="hidden mt-6 flex justify-end animate-fade-in">
+                <button id="next-btn" class="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-base shadow-lg shadow-slate-900/15 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                    <span id="next-btn-text">Следующий вопрос</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+        </section>
 
-    <section id="sec-training" class="space-y-4 hidden">
-      <div class="bg-white rounded-2xl p-4 border card-shadow"><h2 class="font-bold">Письма из тренинга</h2></div>
-      <div id="listTraining" class="space-y-3"></div>
-    </section>
+        <!-- Финальный экран результатов -->
+        <section id="result-screen" class="hidden p-8 sm:p-10 text-center animate-fade-in">
+            <div id="result-emoji" class="text-6xl sm:text-7xl mb-4 inline-block animate-bounce">🏆</div>
+            
+            <span id="result-badge" class="inline-block px-4 py-1.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800 mb-3">
+                Эко-эксперт
+            </span>
 
-    <section id="sec-code" class="space-y-4 hidden">
-      <div class="bg-white rounded-2xl p-5 border card-shadow space-y-4">
-        <div class="border-b pb-3">
-          <h2 class="font-bold text-lg">💻 Редактор кода</h2>
-          <p class="text-xs text-slate-500 mt-1">Загружайте HTML с GitHub, изменяйте и сохраняйте обратно.</p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <button onclick="selectSite('psych')" id="btnSitePsych" class="site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-indigo-600 text-white">🛡️ Служба доверия</button>
-          <button onclick="selectSite('voice')" id="btnSiteVoice" class="site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-white">💡 Голос учеников</button>
-          <button onclick="selectSite('training')" id="btnSiteTraining" class="site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-white">🎮 Тренинг</button>
-        </div>
-        <div class="flex gap-2 flex-wrap">
-          <button onclick="loadCode()" class="bg-slate-700 hover:bg-slate-800 text-white text-sm font-bold px-4 py-2 rounded-lg">📂 Загрузить код</button>
-          <button onclick="saveCode()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2 rounded-lg">💾 Сохранить на GitHub</button>
-        </div>
-        <p id="codeStatus" class="text-xs text-slate-500">Выберите сайт и нажмите «Загрузить код»</p>
-        <textarea id="codeEditor" class="w-full code-editor p-3 border rounded-lg bg-slate-50 focus:outline-none focus:border-indigo-500" placeholder="Нажмите «Загрузить код»..."></textarea>
-      </div>
-    </section>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-2">
+                Квиз завершён!
+            </h2>
+            
+            <p id="result-message" class="text-slate-600 text-base sm:text-lg max-w-md mx-auto mb-8">
+                Отличный результат! Вы прекрасно знаете, как беречь энергию дома и в школе.
+            </p>
 
-    <section id="sec-settings" class="space-y-4 hidden">
-      <div class="bg-white rounded-2xl p-5 border card-shadow space-y-4">
-        <h2 class="font-bold text-lg border-b pb-2">⚙️ Настройки</h2>
-        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900">
-          ⚠️ <b>Внимание:</b> Токен дает полный доступ к репозиториям. Никому его не передавайте.
-        </div>
-        <div class="space-y-3 pt-3 border-t">
-          <div class="bg-slate-50 p-3 rounded-lg space-y-2">
-            <p class="text-xs font-bold text-rose-700">🛡️ Служба доверия (Психолог)</p>
-            <input type="text" id="gh_psych_token" placeholder="GitHub Token (ghp_...)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_psych_owner" placeholder="Владелец (ник)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_psych_repo" placeholder="Репозиторий (-safeschool)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_psych_path" placeholder="Файл (index.html)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-          </div>
-          <div class="bg-slate-50 p-3 rounded-lg space-y-2">
-            <p class="text-xs font-bold text-indigo-700">💡 Голос учеников (Твой)</p>
-            <input type="text" id="gh_voice_token" placeholder="GitHub Token" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_voice_owner" placeholder="Владелец (ник)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_voice_repo" placeholder="Репозиторий" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_voice_path" placeholder="Файл (index.html)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-          </div>
-          <div class="bg-slate-50 p-3 rounded-lg space-y-2">
-            <p class="text-xs font-bold text-amber-700">🎮 Тренинг (Твой)</p>
-            <input type="text" id="gh_training_token" placeholder="GitHub Token" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_training_owner" placeholder="Владелец (ник)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_training_repo" placeholder="Репозиторий (safeschool-trening)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-            <input type="text" id="gh_training_path" placeholder="Файл (index.html)" class="w-full px-2 py-1.5 border rounded text-xs bg-white">
-          </div>
-        </div>
-        <button onclick="saveSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg">💾 Сохранить настройки</button>
-      </div>
-    </section>
+            <!-- Карточки статистики -->
+            <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto mb-8">
+                <div class="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+                    <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Правильных ответов</div>
+                    <div class="text-2xl sm:text-3xl font-extrabold text-emerald-600">
+                        <span id="final-score">0</span> <span class="text-lg text-slate-400 font-medium">/ 20</span>
+                    </div>
+                </div>
+                <div class="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+                    <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-1">Точность</div>
+                    <div class="text-2xl sm:text-3xl font-extrabold text-sky-600">
+                        <span id="final-percent">0</span>%
+                    </div>
+                </div>
+            </div>
 
-  </main>
-</div>
+            <button id="restart-btn" class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-base shadow-lg shadow-emerald-500/25 transition-all cursor-pointer">
+                🔄 Пройти заново
+            </button>
+        </section>
 
-<script>
-const BIN_ID = "6af3158dffd5d16053b6a4ae";
-const MASTER_KEY = "$2a$10$5OG8yAXzsTfGHDGr/POtMOcu6YnKqlOE1CCYpXFlgRCCiVp7AwWOe";
-const API_URL = "https://api.jsonbin.io/v3/b/" + BIN_ID;
+    </main>
 
-let data = {
-  posts: [], voice_posts: [], training_letters: [],
-  isSiteClosed: false, chatClosed: false,
-  settings: { adminPass: 'bozdakov', github: { psych: {}, voice: {}, training: {} } }
-};
+    <script>
+        /**
+         * База из 20 вопросов по теме экономии электроэнергии и тепла.
+         * Каждый вопрос имеет 3 варианта (а, б, в), индекс правильного ответа и пояснение.
+         */
+        const quizQuestions = [
+            {
+                question: "Какой бытовой прибор обычно тратит больше всего электроэнергии за месяц?",
+                options: [
+                    "Холодильник, работающий круглосуточно",
+                    "Зарядное устройство для смартфона",
+                    "Светодиодная настольная лампа"
+                ],
+                correct: 0,
+                explanation: "Холодильник работает 24 часа в сутки без перерывов, поэтому на него приходится до 25–30% всего расхода энергии в квартире."
+            },
+            {
+                question: "Какая лампочка потребляет меньше всего электричества при одинаковой яркости?",
+                options: [
+                    "Обычная лампа накаливания",
+                    "Светодиодная (LED) лампа",
+                    "Галогенная лампа"
+                ],
+                correct: 1,
+                explanation: "LED-лампы расходуют в 7–8 раз меньше энергии, чем лампы накаливания, и служат намного дольше."
+            },
+            {
+                question: "Как правильнее всего пользоваться электрочайником, чтобы экономить энергию?",
+                options: [
+                    "Всегда наливать полный чайник до максимальной отметки",
+                    "Кипятить одну и ту же воду по три раза подряд",
+                    "Наливать ровно столько воды, сколько нужно на один раз"
+                ],
+                correct: 2,
+                explanation: "Кипячение лишней воды тратит впустую много электроэнергии и времени — наливайте ровно на нужное количество чашек."
+            },
+            {
+                question: "Что происходит, если оставить зарядное устройство в розетке без телефона?",
+                options: [
+                    "Оно всё равно продолжает потреблять небольшое количество энергии",
+                    "Оно возвращает электричество обратно в сеть",
+                    "Оно автоматически отключается от сети на 100%"
+                ],
+                correct: 0,
+                explanation: "Даже без подключённого гаджета блок питания работает в режиме холостого хода и понемногу расходует электроэнергию."
+            },
+            {
+                question: "Как лучше проветривать комнату зимой, чтобы не терять тепло?",
+                options: [
+                    "Держать форточку приоткрытой весь день",
+                    "Открыть окно широко на 5–10 минут",
+                    "Включить обогреватель и открыть окно нараспашку"
+                ],
+                correct: 1,
+                explanation: "Быстрое сквозное проветривание за 5–10 минут обновляет воздух, но стены и мебель не успевают остыть."
+            },
+            {
+                question: "Что нужно сделать, выходя из пустой комнаты или класса даже на 10–15 минут?",
+                options: [
+                    "Оставить свет включённым, чтобы не щёлкать выключателем",
+                    "Включить дополнительный светильник",
+                    "Выключить свет"
+                ],
+                correct: 2,
+                explanation: "Выключение света при выходе из комнаты — самая простая и эффективная привычка для экономии энергии."
+            },
+            {
+                question: "Где на кухне лучше всего поставить холодильник для меньшего расхода электричества?",
+                options: [
+                    "Подальше от плиты, духовки и батареи отопления",
+                    "Вплотную к газовой или электрической плите",
+                    "Прямо под прямыми солнечными лучами у окна"
+                ],
+                correct: 0,
+                explanation: "Рядом с источниками тепла холодильнику приходится работать гораздо интенсивнее, чтобы поддерживать холод внутри."
+            },
+            {
+                question: "Почему не стоит ставить горячую кастрюлю с едой сразу в холодильник?",
+                options: [
+                    "От этого в холодильнике перегорит лампочка",
+                    "Холодильнику придётся тратить много энергии на охлаждение",
+                    "Еда от этого станет слишком солёной"
+                ],
+                correct: 1,
+                explanation: "Горячая пища сильно нагревает воздух внутри камеры, заставляя компрессор работать на полную мощность."
+            },
+            {
+                question: "Какой режим стирки помогает заметно сократить расход электроэнергии?",
+                options: [
+                    "Стирка при 90 °C ради пары футболок",
+                    "Двойной цикл полоскания и отжима каждый раз",
+                    "Стирка при температуре 30–40 °C с полной загрузкой"
+                ],
+                correct: 2,
+                explanation: "Около 80% энергии стиральная машина тратит именно на нагрев воды, поэтому стирка при 30–40 °C очень экономна."
+            },
+            {
+                question: "Что нужно регулярно очищать внутри электрочайника, чтобы он тратил меньше энергии?",
+                options: [
+                    "Накипь на нагревательном элементе и стенках",
+                    "Пластиковую ручку снаружи",
+                    "Шнур питания"
+                ],
+                correct: 0,
+                explanation: "Накипь плохо проводит тепло, из-за чего вода закипает дольше, а расход электричества растёт на 15–20%."
+            },
+            {
+                question: "Как уменьшить расход энергии от телевизора или компьютера на ночь?",
+                options: [
+                    "Просто выключить звук на пульте",
+                    "Полностью выключить прибор из сети или сетевым фильтром",
+                    "Оставить включённой заставку на экране"
+                ],
+                correct: 1,
+                explanation: "В режиме ожидания (standby) техника продолжает потреблять энергию круглосуточно."
+            },
+            {
+                question: "Какой цвет стен и потолка помогает лучше отражать свет и реже включать лампы?",
+                options: [
+                    "Тёмно-синий или графитовый",
+                    "Чёрный",
+                    "Светлый или белый"
+                ],
+                correct: 2,
+                explanation: "Светлые поверхности отражают до 70–80% дневного света, делая комнату заметно светлее без лишних ламп."
+            },
+            {
+                question: "Как можно сэкономить электроэнергию при глажке белья утюгом?",
+                options: [
+                    "Выключать утюг за пару минут до конца и доглаживать остаточным теплом",
+                    "Держать утюг включённым в розетку весь выходной день",
+                    "Гладить все вещи только на максимальной температуре"
+                ],
+                correct: 0,
+                explanation: "Подошва утюга долго сохраняет тепло после отключения — этого хватает, чтобы догладить несколько лёгких вещей."
+            },
+            {
+                question: "Как правильно пользоваться кондиционером летом, чтобы не тратить лишнюю энергию?",
+                options: [
+                    "Открывать окна нараспашку при включённом кондиционере",
+                    "Плотно закрывать окна и двери в охлаждаемой комнате",
+                    "Ставить минимальную температуру 16 °C на целый день"
+                ],
+                correct: 1,
+                explanation: "При открытых окнах кондиционер пытается охладить улицу и работает без остановки на максимальной мощности."
+            },
+            {
+                question: "Что произойдёт, если в пылесосе вовремя не чистить мешок или контейнер для пыли?",
+                options: [
+                    "Он станет работать тише и экономнее",
+                    "Расход энергии вообще не изменится",
+                    "Он будет хуже втягивать пыль и тратить больше энергии"
+                ],
+                correct: 2,
+                explanation: "Забитый фильтр или мешок создаёт сопротивление воздуху, из-за чего мотор перегревается и расходует больше тока."
+            },
+            {
+                question: "Как правильнее готовить на электроплите для экономии электричества?",
+                options: [
+                    "Накрывать кастрюлю крышкой и подбирать её по размеру конфорки",
+                    "Готовить в открытой кастрюле без крышки",
+                    "Ставить маленькую турку на самую большую конфорку"
+                ],
+                correct: 0,
+                explanation: "Закрытая крышка не даёт теплу улетучиваться, благодаря чему вода закипает в 2–3 раза быстрее."
+            },
+            {
+                question: "Зачем нужно периодически протирать лампочки и плафоны от пыли?",
+                options: [
+                    "Чтобы лампочка не шумела при включении",
+                    "Пыль задерживает до 20% света, и приходится включать больше ламп",
+                    "Это никак не влияет на яркость освещения"
+                ],
+                correct: 1,
+                explanation: "Слой пыли на плафонах заметно снижает освещённость комнаты при том же расходе электроэнергии."
+            },
+            {
+                question: "Как продлить время работы смартфона или ноутбука от одного заряда?",
+                options: [
+                    "Включить максимальную яркость экрана и фонарик",
+                    "Держать постоянно включёнными Bluetooth и GPS",
+                    "Уменьшить яркость экрана и закрыть лишние фоновые приложения"
+                ],
+                correct: 2,
+                explanation: "Экран — главный потребитель энергии в смартфоне, поэтому снижение яркости заметно экономит заряд."
+            },
+            {
+                question: "Какой источник энергии относится к возобновляемым и экологичным?",
+                options: [
+                    "Энергия солнца и ветра",
+                    "Сжигание каменного угля",
+                    "Сжигание мазута"
+                ],
+                correct: 0,
+                explanation: "Солнце и ветер — возобновляемые источники энергии, которые не истощаются и не загрязняют атмосферу выбросами."
+            },
+            {
+                question: "Что помогает лучше всего сохранять тепло в доме зимой без лишних затрат?",
+                options: [
+                    "Плотно закрытые длинными шторами батареи отопления",
+                    "Утеплённые окна без щелей и плотно закрытые двери",
+                    "Постоянно открытая форточка на кухне"
+                ],
+                correct: 1,
+                explanation: "Через щели в окнах и дверях уходит до 30–40% тепла, а открытые батареи свободно отдают тепло в комнату."
+            }
+        ];
 
-let currentSite = 'psych';
-let currentSha = null;
-let isFetching = false;
+        // Буквенные обозначения вариантов
+        const optionLetters = ['а', 'б', 'в'];
 
-function authAdmin() {
-  const p = document.getElementById('masterPass').value;
-  if (p === (data.settings.adminPass || 'bozdakov')) {
-    document.getElementById('loginScreen').classList.add('hidden');
-    document.getElementById('dashScreen').classList.remove('hidden');
-    document.getElementById('dashScreen').classList.add('flex');
-    loadAllData();
-    setInterval(loadAllData, 15000);
-  } else {
-    document.getElementById('loginError').classList.remove('hidden');
-  }
-}
+        // Состояние квиза
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
 
-async function loadAllData() {
-  if (isFetching) return;
-  isFetching = true;
-  try {
-    const res = await fetch(`${API_URL}/latest?t=${Date.now()}`, { headers: { 'X-Master-Key': MASTER_KEY, 'X-Bin-Meta': 'false' } });
-    const n = await res.json();
-    if (n) {
-      data = { ...data, ...n };
-      if (!data.settings) data.settings = {};
-      if (!data.settings.github) data.settings.github = {};
-      if (!data.settings.github.psych) data.settings.github.psych = {};
-      if (!data.settings.github.voice) data.settings.github.voice = {};
-      if (!data.settings.github.training) data.settings.github.training = {};
-      renderAll();
-    }
-  } catch(e) { console.error(e); } finally { isFetching = false; }
-}
+        // Элементы DOM
+        const bodyContainer = document.getElementById('body-container');
+        const quizHeader = document.getElementById('quiz-header');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
 
-async function saveSection(k, v) {
-  try {
-    const r = await fetch(`${API_URL}/latest?t=${Date.now()}`, { headers: { 'X-Master-Key': MASTER_KEY, 'X-Bin-Meta': 'false' } });
-    const cur = await r.json() || {};
-    cur[k] = v;
-    await fetch(API_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY }, body: JSON.stringify(cur) });
-    data[k] = v;
-    renderAll();
-  } catch(e) { alert('Ошибка сохранения'); }
-}
+        const currentQNumEl = document.getElementById('current-q-num');
+        const scoreCountEl = document.getElementById('score-count');
+        const progressBarEl = document.getElementById('progress-bar');
 
-function switchTab(id) {
-  document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
-  document.getElementById('sec-' + id).classList.remove('hidden');
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-  document.getElementById('tab-' + id).classList.add('active-tab');
-}
+        const questionContainer = document.getElementById('question-container');
+        const questionTextEl = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
 
-function esc(s) { return (s || '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        const feedbackBox = document.getElementById('feedback-box');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackExplanation = document.getElementById('feedback-explanation');
 
-// ВНИМАНИЕ: здесь исправление. Функция не трогает поля, в которых сейчас курсор.
-function renderAll() {
-  document.getElementById('statPsych').textContent = (data.posts || []).length;
-  document.getElementById('statVoice').textContent = (data.voice_posts || []).length;
-  document.getElementById('statTraining').textContent = (data.training_letters || []).length;
-  document.getElementById('btnTogglePsych').textContent = data.isSiteClosed ? '🟢 Открыть' : '🔒 Закрыть';
-  document.getElementById('btnToggleVoice').textContent = data.chatClosed ? '🟢 Открыть' : '🔒 Закрыть';
-  document.getElementById('statStatus').textContent = (data.isSiteClosed || data.chatClosed) ? 'Есть закрытые' : 'Открыто';
+        const nextBtnContainer = document.getElementById('next-btn-container');
+        const nextBtn = document.getElementById('next-btn');
+        const nextBtnText = document.getElementById('next-btn-text');
 
-  ['psych', 'voice', 'training'].forEach(s => {
-    const g = data.settings.github[s] || {};
-    const el = document.getElementById('gh_' + s + '_token');
-    if(el && document.activeElement !== el) el.value = g.token || '';
-    const ow = document.getElementById('gh_' + s + '_owner');
-    if(ow && document.activeElement !== ow) ow.value = g.owner || '';
-    const rp = document.getElementById('gh_' + s + '_repo');
-    if(rp && document.activeElement !== rp) rp.value = g.repo || '';
-    const pt = document.getElementById('gh_' + s + '_path');
-    if(pt && document.activeElement !== pt) pt.value = g.path || 'index.html';
-  });
+        const restartBtn = document.getElementById('restart-btn');
 
-  renderPsych(); renderVoice(); renderTraining();
-}
+        /**
+         * Запуск анимации конфетти при правильном ответе
+         */
+        function triggerSuccessConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 75,
+                    spread: 70,
+                    origin: { y: 0.65 },
+                    colors: ['#10b981', '#34d399', '#38bdf8', '#fbbf24', '#a78bfa']
+                });
+            }
+        }
 
-function renderPsych() {
-  const l = document.getElementById('listPsych');
-  if (!data.posts || !data.posts.length) { l.innerHTML = '<p class="text-sm text-slate-400 text-center p-8 bg-white rounded-2xl border">Жалоб нет</p>'; return; }
-  l.innerHTML = [...data.posts].sort((a,b) => b.id - a.id).map(p => `
-    <div class="bg-white rounded-2xl p-4 border card-shadow space-y-2">
-      <div class="flex justify-between items-start">
-        <div><span class="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded">${esc(p.category)}</span><h3 class="font-bold mt-1">${esc(p.name)} (${esc(p.class)})</h3></div>
-        <span class="text-[10px] font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">${esc(p.status)}</span>
-      </div>
-      <p class="text-xs text-slate-500"><b>Обидчик:</b> ${esc(p.bully)}</p>
-      <p class="text-sm bg-slate-50 p-2 rounded">${esc(p.desc)}</p>
-      <div class="flex gap-2">
-        <select onchange="upPsychStatus('${p.id}', this.value)" class="text-xs border rounded px-2 py-1 bg-white">
-          <option value="Новое" ${p.status === 'Новое' ? 'selected' : ''}>Новое</option>
-          <option value="В работе" ${p.status === 'В работе' ? 'selected' : ''}>В работе</option>
-          <option value="Встреча" ${p.status === 'Встреча' ? 'selected' : ''}>Встреча</option>
-          <option value="Решено" ${p.status === 'Решено' ? 'selected' : ''}>Решено</option>
-        </select>
-        <button onclick="delPsych('${p.id}')" class="text-xs font-bold bg-rose-600 text-white px-3 py-1 rounded ml-auto">Удалить</button>
-      </div>
-      <div class="pt-2 border-t">
-        <textarea id="ansP_${p.id}" class="w-full text-xs p-2 border rounded bg-slate-50" placeholder="Ответ...">${esc(p.replyToStudent)}</textarea>
-        <button onclick="replyPsych('${p.id}')" class="mt-1 text-xs font-bold bg-indigo-600 text-white px-3 py-1 rounded">Отправить</button>
-      </div>
-    </div>
-  `).join('');
-}
-function upPsychStatus(id, s) { saveSection('posts', data.posts.map(p => String(p.id) === String(id) ? {...p, status: s} : p)); }
-function replyPsych(id) { const t = document.getElementById('ansP_' + id).value.trim(); saveSection('posts', data.posts.map(p => String(p.id) === String(id) ? {...p, replyToStudent: t} : p)); alert('Отправлено!'); }
-function delPsych(id) { if(confirm('Удалить?')) saveSection('posts', data.posts.filter(p => String(p.id) !== String(id))); }
-function togglePsychClosed() { saveSection('isSiteClosed', !data.isSiteClosed); }
+        /**
+         * Запуск праздничного салюта конфетти на финальном экране
+         */
+        function triggerFinalConfetti() {
+            if (typeof confetti !== 'function') return;
+            const duration = 2000;
+            const end = Date.now() + duration;
 
-function renderVoice() {
-  const l = document.getElementById('listVoice');
-  if (!data.voice_posts || !data.voice_posts.length) { l.innerHTML = '<p class="text-sm text-slate-400 text-center p-8 bg-white rounded-2xl border">Идей нет</p>'; return; }
-  l.innerHTML = [...data.voice_posts].sort((a,b) => b.created - a.created).map(p => `
-    <div class="bg-white rounded-2xl p-4 border card-shadow space-y-2">
-      <div class="flex justify-between items-start">
-        <div><span class="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded">${esc(p.category)}</span><h3 class="font-bold mt-1">${esc(p.title)}</h3></div>
-        <span class="text-[10px] font-bold px-2 py-1 rounded bg-blue-100 text-blue-700">${esc(p.status)}</span>
-      </div>
-      <p class="text-sm bg-slate-50 p-2 rounded">${esc(p.body)}</p>
-      <div class="flex gap-2">
-        <select onchange="upVoiceStatus('${p.id}', this.value)" class="text-xs border rounded px-2 py-1 bg-white">
-          <option value="Новое" ${p.status === 'Новое' ? 'selected' : ''}>Новое</option>
-          <option value="В работе" ${p.status === 'В работе' ? 'selected' : ''}>В работе</option>
-          <option value="Выполнено" ${p.status === 'Выполнено' ? 'selected' : ''}>Выполнено</option>
-        </select>
-        <button onclick="delVoice('${p.id}')" class="text-xs font-bold bg-rose-600 text-white px-3 py-1 rounded ml-auto">Удалить</button>
-      </div>
-      <div class="pt-2 border-t">
-        <textarea id="ansV_${p.id}" class="w-full text-xs p-2 border rounded bg-slate-50" placeholder="Ответ...">${esc(p.answer)}</textarea>
-        <button onclick="replyVoice('${p.id}')" class="mt-1 text-xs font-bold bg-indigo-600 text-white px-3 py-1 rounded">Опубликовать</button>
-      </div>
-    </div>
-  `).join('');
-}
-function upVoiceStatus(id, s) { saveSection('voice_posts', data.voice_posts.map(p => String(p.id) === String(id) ? {...p, status: s} : p)); }
-function replyVoice(id) { const t = document.getElementById('ansV_' + id).value.trim(); saveSection('voice_posts', data.voice_posts.map(p => String(p.id) === String(id) ? {...p, answer: t} : p)); alert('Опубликовано!'); }
-function delVoice(id) { if(confirm('Удалить?')) saveSection('voice_posts', data.voice_posts.filter(p => String(p.id) !== String(id))); }
-function toggleVoiceClosed() { saveSection('chatClosed', !data.chatClosed); }
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#10b981', '#0ea5e9', '#f59e0b']
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#10b981', '#0ea5e9', '#f59e0b']
+                });
 
-function renderTraining() {
-  const l = document.getElementById('listTraining');
-  if (!data.training_letters || !data.training_letters.length) { l.innerHTML = '<p class="text-sm text-slate-400 text-center p-8 bg-white rounded-2xl border">Писем нет</p>'; return; }
-  l.innerHTML = [...data.training_letters].sort((a,b) => b.id - a.id).map(x => `
-    <div class="bg-white rounded-2xl p-4 border card-shadow space-y-2">
-      <div class="flex justify-between"><span class="font-bold text-sm">${x.isAnon ? '👤 Аноним' : '👤 ' + esc(x.name) + ' (' + esc(x.class) + ')'}</span><span class="text-[10px] text-slate-400">${esc(x.date)}</span></div>
-      <p class="text-sm bg-slate-50 p-3 rounded">${esc(x.text)}</p>
-      <button onclick="delTrain('${x.id}')" class="text-xs font-bold bg-rose-600 text-white px-3 py-1 rounded">Удалить</button>
-    </div>
-  `).join('');
-}
-function delTrain(id) { if(confirm('Удалить?')) saveSection('training_letters', data.training_letters.filter(l => String(l.id) !== String(id))); }
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
 
-function saveSettings() {
-  const ns = { ...data.settings, github: {} };
-  ['psych', 'voice', 'training'].forEach(s => {
-    ns.github[s] = {
-      token: document.getElementById('gh_' + s + '_token').value.trim(),
-      owner: document.getElementById('gh_' + s + '_owner').value.trim(),
-      repo: document.getElementById('gh_' + s + '_repo').value.trim(),
-      path: document.getElementById('gh_' + s + '_path').value.trim() || 'index.html'
-    };
-  });
-  saveSection('settings', ns);
-  alert('✅ Настройки сохранены!');
-}
+        /**
+         * Отрисовка текущего вопроса и вариантов ответа
+         */
+        function renderQuestion() {
+            answered = false;
+            const qData = quizQuestions[currentQuestionIndex];
 
-function selectSite(site) {
-  currentSite = site;
-  currentSha = null;
-  document.querySelectorAll('.site-sel-btn').forEach(b => b.className = 'site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-white');
-  const id = 'btnSite' + site.charAt(0).toUpperCase() + site.slice(1);
-  const btn = document.getElementById(id);
-  if(btn) btn.className = 'site-sel-btn px-4 py-2 text-xs font-bold rounded-lg border bg-indigo-600 text-white';
-  document.getElementById('codeStatus').textContent = 'Сайт: ' + site;
-  document.getElementById('codeEditor').value = '';
-}
+            // Обновление шапки и прогресс-бара
+            currentQNumEl.textContent = currentQuestionIndex + 1;
+            scoreCountEl.textContent = score;
+            const progressPercent = ((currentQuestionIndex + 1) / quizQuestions.length) * 100;
+            progressBarEl.style.width = `${progressPercent}%`;
 
-async function loadCode() {
-  const cfg = data.settings.github[currentSite];
-  if (!cfg || !cfg.token || !cfg.owner || !cfg.repo) { alert('Заполните настройки GitHub во вкладке ⚙️ Настройки!'); return; }
-  document.getElementById('codeStatus').textContent = '⏳ Загрузка...';
-  try {
-    const r = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`, {
-      headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github.v3+json' }
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    const content = decodeURIComponent(escape(atob(j.content.replace(/\s/g, ''))));
-    document.getElementById('codeEditor').value = content;
-    currentSha = j.sha;
-    document.getElementById('codeStatus').textContent = '✅ Загружено: ' + content.length + ' символов. SHA: ' + j.sha.slice(0, 7);
-  } catch(e) { document.getElementById('codeStatus').textContent = '❌ ' + e.message; }
-}
+            // Перезапуск анимации вопроса
+            questionContainer.classList.remove('animate-fade-in');
+            void questionContainer.offsetWidth; // trigger reflow
+            questionContainer.classList.add('animate-fade-in');
 
-async function saveCode() {
-  const cfg = data.settings.github[currentSite];
-  const c = document.getElementById('codeEditor').value;
-  if (!cfg || !cfg.token) { alert('Заполните настройки!'); return; }
-  if (!c) { alert('Код пустой'); return; }
-  if (!currentSha) { alert('Сначала загрузите код!'); return; }
-  if (!confirm('Перезаписать текущий код сайта?')) return;
-  
-  document.getElementById('codeStatus').textContent = '⏳ Сохранение...';
-  try {
-    const encoded = btoa(unescape(encodeURIComponent(c)));
-    const r = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`, {
-      method: 'PUT',
-      headers: { 'Authorization': 'token ' + cfg.token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: 'Обновление из админки ' + new Date().toISOString(), content: encoded, sha: currentSha, branch: 'main' })
-    });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.message); }
-    const j = await r.json();
-    currentSha = j.content.sha;
-    document.getElementById('codeStatus').textContent = '✅ Сохранено! Новый SHA: ' + j.content.sha.slice(0, 7);
-  } catch(e) { document.getElementById('codeStatus').textContent = '❌ ' + e.message; }
-}
+            questionTextEl.textContent = `${currentQuestionIndex + 1}. ${qData.question}`;
 
-selectSite('psych');
-loadAllData();
-</script>
+            // Скрываем фидбек и кнопку "Далее"
+            feedbackBox.classList.add('hidden');
+            nextBtnContainer.classList.add('hidden');
+
+            // Очищаем и создаём кнопки вариантов ответа (а, б, в)
+            optionsContainer.innerHTML = '';
+            qData.options.forEach((optionText, index) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'option-btn w-full text-left p-4 sm:p-4.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-400 hover:bg-emerald-50/40 flex items-center gap-3.5 cursor-pointer group';
+                btn.dataset.index = index;
+
+                btn.innerHTML = `
+                    <span class="option-letter flex-shrink-0 w-9 h-9 rounded-xl bg-slate-100 group-hover:bg-emerald-100 group-hover:text-emerald-700 text-slate-700 font-bold text-base flex items-center justify-center uppercase transition-colors">
+                        ${optionLetters[index]}
+                    </span>
+                    <span class="option-label text-slate-800 font-medium text-base sm:text-lg leading-snug flex-1">
+                        ${optionText}
+                    </span>
+                    <span class="option-status text-xl opacity-0 transition-opacity"></span>
+                `;
+
+                btn.addEventListener('click', () => handleAnswer(index, btn));
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        /**
+         * Обработка выбора ответа пользователем
+         */
+        function handleAnswer(selectedIndex, selectedBtn) {
+            if (answered) return;
+            answered = true;
+
+            const qData = quizQuestions[currentQuestionIndex];
+            const isCorrect = selectedIndex === qData.correct;
+            const allButtons = optionsContainer.querySelectorAll('.option-btn');
+
+            // Блокируем все кнопки после выбора
+            allButtons.forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.remove('hover:border-emerald-400', 'hover:bg-emerald-50/40', 'cursor-pointer');
+                btn.classList.add('cursor-default');
+
+                const letterBadge = btn.querySelector('.option-letter');
+                const statusIcon = btn.querySelector('.option-status');
+
+                // Подсвечиваем правильный ответ зелёным в любом случае
+                if (idx === qData.correct) {
+                    btn.classList.remove('border-slate-200', 'bg-white');
+                    btn.classList.add('border-emerald-500', 'bg-emerald-50', 'ring-2', 'ring-emerald-500/20');
+                    letterBadge.classList.remove('bg-slate-100', 'text-slate-700');
+                    letterBadge.classList.add('bg-emerald-500', 'text-white');
+                    statusIcon.textContent = '✅';
+                    statusIcon.classList.remove('opacity-0');
+                }
+            });
+
+            if (isCorrect) {
+                // Сценарий правильного ответа
+                score++;
+                scoreCountEl.textContent = score;
+
+                feedbackBox.className = 'mt-6 p-4 sm:p-5 rounded-2xl border border-emerald-200 bg-emerald-50/90 text-emerald-950 animate-fade-in';
+                feedbackIcon.textContent = '🎉';
+                feedbackTitle.textContent = 'Правильно! Отличная работа!';
+                feedbackTitle.className = 'font-bold text-base sm:text-lg text-emerald-800';
+                feedbackExplanation.textContent = qData.explanation;
+
+                triggerSuccessConfetti();
+            } else {
+                // Сценарий неправильного ответа
+                const selectedLetter = selectedBtn.querySelector('.option-letter');
+                const selectedStatus = selectedBtn.querySelector('.option-status');
+
+                selectedBtn.classList.remove('border-slate-200', 'bg-white');
+                selectedBtn.classList.add('border-rose-500', 'bg-rose-50', 'animate-shake');
+                selectedLetter.classList.remove('bg-slate-100', 'text-slate-700');
+                selectedLetter.classList.add('bg-rose-500', 'text-white');
+                selectedStatus.textContent = '❌';
+                selectedStatus.classList.remove('opacity-0');
+
+                // Лёгкая красная вспышка по краям экрана вместо конфетти
+                bodyContainer.classList.remove('error-flash');
+                void bodyContainer.offsetWidth;
+                bodyContainer.classList.add('error-flash');
+
+                feedbackBox.className = 'mt-6 p-4 sm:p-5 rounded-2xl border border-rose-200 bg-rose-50/90 text-rose-950 animate-fade-in';
+                feedbackIcon.textContent = '💡';
+                feedbackTitle.textContent = 'Неправильно! Запомним на будущее:';
+                feedbackTitle.className = 'font-bold text-base sm:text-lg text-rose-800';
+                feedbackExplanation.textContent = qData.explanation;
+            }
+
+            // Показываем блок объяснения и кнопку перехода
+            feedbackBox.classList.remove('hidden');
+
+            if (currentQuestionIndex === quizQuestions.length - 1) {
+                nextBtnText.textContent = 'Показать результат';
+            } else {
+                nextBtnText.textContent = 'Следующий вопрос';
+            }
+            nextBtnContainer.classList.remove('hidden');
+        }
+
+        /**
+         * Переход к следующему вопросу или показ итогового экрана
+         */
+        nextBtn.addEventListener('click', () => {
+            if (currentQuestionIndex < quizQuestions.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion();
+            } else {
+                showResults();
+            }
+        });
+
+        /**
+         * Отображение финального экрана результатов
+         */
+        function showResults() {
+            quizHeader.classList.add('hidden');
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+
+            const percent = Math.round((score / quizQuestions.length) * 100);
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('final-percent').textContent = percent;
+
+            const resultEmoji = document.getElementById('result-emoji');
+            const resultBadge = document.getElementById('result-badge');
+            const resultMessage = document.getElementById('result-message');
+
+            if (score >= 17) {
+                resultEmoji.textContent = '🏆';
+                resultBadge.textContent = 'Мастер энергосбережения';
+                resultBadge.className = 'inline-block px-4 py-1.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800 mb-3';
+                resultMessage.textContent = 'Блестящий результат! Вы настоящий эко-эксперт и знаете все секреты экономии электроэнергии и тепла.';
+                triggerFinalConfetti();
+            } else if (score >= 12) {
+                resultEmoji.textContent = '🌟';
+                resultBadge.textContent = 'Продвинутый знаток';
+                resultBadge.className = 'inline-block px-4 py-1.5 rounded-full text-sm font-bold bg-sky-100 text-sky-800 mb-3';
+                resultMessage.textContent = 'Очень хороший результат! Вы отлично разбираетесь в полезных привычках, а пару мелочей теперь точно запомните.';
+                triggerSuccessConfetti();
+            } else {
+                resultEmoji.textContent = '🌱';
+                resultBadge.textContent = 'Начинающий эко-герой';
+                resultBadge.className = 'inline-block px-4 py-1.5 rounded-full text-sm font-bold bg-amber-100 text-amber-800 mb-3';
+                resultMessage.textContent = 'Хорошее начало! Теперь вы знаете много полезных лайфхаков, как беречь энергию дома и в школе. Попробуйте пройти ещё раз!';
+            }
+        }
+
+        /**
+         * Перезапуск квиза сначала
+         */
+        restartBtn.addEventListener('click', () => {
+            currentQuestionIndex = 0;
+            score = 0;
+            resultScreen.classList.add('hidden');
+            quizHeader.classList.remove('hidden');
+            quizScreen.classList.remove('hidden');
+            renderQuestion();
+        });
+
+        // Инициализация первого вопроса при загрузке страницы
+        window.addEventListener('DOMContentLoaded', renderQuestion);
+    </script>
 </body>
 </html>
